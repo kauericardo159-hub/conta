@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Conta Base - Gerenciador</title>
+    <style>
+        /* CSS Integrado e Otimizado */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121214;
+            color: #e1e1e6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        .account-card {
+            background-color: #202024;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            text-align: center;
+            width: 340px;
+            border: 1px solid #29292e;
+        }
+
+        .avatar-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #8257e5;
+            box-shadow: 0 0 15px rgba(130, 87, 229, 0.3);
+            background: #121214;
+        }
+
+        h2 {
+            margin: 10px 0 5px 0;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .username-display {
+            font-size: 1.2rem;
+            color: #04d361;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a8a8b3;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #29292e;
+            background-color: #121214;
+            color: #fff;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #8257e5;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn-upload {
+            display: inline-block;
+            padding: 6px 14px;
+            background-color: #29292e;
+            color: #e1e1e6;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.2s;
+        }
+
+        .btn-upload:hover {
+            background-color: #323238;
+            color: #fff;
+        }
+
+        .btn-save {
+            width: 100%;
+            padding: 14px;
+            background-color: #8257e5;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+            box-shadow: 0 4px 12px rgba(130, 87, 229, 0.2);
+        }
+
+        .btn-save:hover {
+            background-color: #9466ff;
+        }
+
+        .btn-clear {
+            background: transparent;
+            color: #ff4b4b;
+            border: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 15px;
+            cursor: pointer;
+            text-decoration: underline;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .btn-clear:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="account-card">
+        <div class="avatar-container">
+            <img id="avatarPreview" class="avatar-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Avatar do Usuário">
+            <label for="avatarInput" class="btn-upload">Alterar Foto</label>
+            <input type="file" id="avatarInput" accept="image/*">
+        </div>
+
+        <h2 id="welcomeTitle">Olá!</h2>
+        <div id="userDisplay" class="username-display">Jogador_Novo</div>
+
+        <hr style="border: 0; border-top: 1px solid #29292e; margin: 1.5rem 0;">
+
+        <div class="form-group">
+            <label for="usernameInput">Nome de Usuário:</label>
+            <input type="text" id="usernameInput" placeholder="Digite seu nick...">
+        </div>
+
+        <button class="btn-save" id="saveBtn">Salvar Alterações</button>
+        <button class="btn-clear" id="clearBtn">Excluir Conta Local</button>
+    </div>
+
+    <script src="conta.js"></script>
+    
+    <script>
+        const avatarInput = document.getElementById('avatarInput');
+        const avatarPreview = document.getElementById('avatarPreview');
+        const usernameInput = document.getElementById('usernameInput');
+        const userDisplay = document.getElementById('userDisplay');
+        const saveBtn = document.getElementById('saveBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        let fotoBase64Atual = "";
+        let generoAtual = "masculino"; // Mantém armazenado sem quebrar o layout padrão
+
+        // 1. Carrega dados da conta na UI
+        function atualizarUI() {
+            const conta = ContaSistema.carregar();
+            
+            userDisplay.textContent = conta.nome;
+            usernameInput.value = conta.nome;
+            avatarPreview.src = conta.foto;
+            
+            fotoBase64Atual = conta.foto;
+            generoAtual = conta.gender || "masculino";
+        }
+
+        window.addEventListener('DOMContentLoaded', atualizarUI);
+
+        // 2. Transforma nova foto em Base64
+        avatarInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    fotoBase64Atual = event.target.result;
+                    avatarPreview.src = fotoBase64Atual;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 3. Salva usando a nova lógica estendida do conta.js
+        saveBtn.addEventListener('click', () => {
+            const novoNome = usernameInput.value.trim();
+            
+            if (novoNome === "") {
+                alert("Por favor, insira um nome válido.");
+                return;
+            }
+
+            // Envia o nome, gênero e a string da imagem de perfil de forma correta
+            ContaSistema.salvar(novoNome, generoAtual, fotoBase64Atual);
+            
+            userDisplay.textContent = novoNome;
+            alert("Alterações salvas com sucesso no perfil!");
+        });
+
+        // 4. Botão de limpeza
+        clearBtn.addEventListener('click', () => {
+            if(confirm("Tem certeza que deseja limpar os dados da sua conta?")) {
+                ContaSistema.limpar();
+                atualizarUI();
+            }
+        });
+    </script>
+</body>
+</html>
