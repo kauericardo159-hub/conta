@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minha Conta Base - Gerenciador</title>
+    <title>Minha Conta Base - Gerenciador Pro</title>
     <style>
-        /* CSS Integrado e Otimizado */
+        /* CSS Otimizado com Tema Dark / Cyberpunk */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121214;
+            background-color: #0c0c12;
             color: #e1e1e6;
             display: flex;
             justify-content: center;
@@ -19,19 +19,19 @@
         }
 
         .account-card {
-            background-color: #202024;
+            background-color: #14141d;
             padding: 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            border-radius: 16px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(130, 87, 229, 0.1);
             text-align: center;
-            width: 340px;
-            border: 1px solid #29292e;
+            width: 350px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .avatar-container {
             position: relative;
-            width: 120px;
-            height: 120px;
+            width: 130px;
+            height: 130px;
             margin: 0 auto 1.5rem;
         }
 
@@ -40,19 +40,21 @@
             height: 100%;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid #8257e5;
-            box-shadow: 0 0 15px rgba(130, 87, 229, 0.3);
-            background: #121214;
+            border: 3px solid #00f0ff;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+            background: #0c0c12;
+            transition: border-color 0.3s;
         }
 
         h2 {
             margin: 10px 0 5px 0;
             color: #fff;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
 
         .username-display {
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             color: #04d361;
             font-weight: bold;
             margin-bottom: 1.5rem;
@@ -62,34 +64,35 @@
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.2rem;
             text-align: left;
         }
 
         label {
             display: block;
             margin-bottom: 0.5rem;
-            color: #a8a8b3;
-            font-size: 0.85rem;
-            font-weight: 600;
+            color: #00f0ff;
+            font-size: 0.78rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
         }
 
-        input[type="text"] {
+        input[type="text"], .select-custom {
             width: 100%;
             padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #29292e;
-            background-color: #121214;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: #0c0c12;
             color: #fff;
             box-sizing: border-box;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
         }
 
-        input[type="text"]:focus {
+        input[type="text"]:focus, .select-custom:focus {
             outline: none;
-            border-color: #8257e5;
+            border-color: #00f0ff;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
         }
 
         input[type="file"] {
@@ -99,20 +102,21 @@
         .btn-upload {
             display: inline-block;
             padding: 6px 14px;
-            background-color: #29292e;
-            color: #e1e1e6;
+            background-color: #1c1c24;
+            color: #a8a8b3;
             border-radius: 20px;
             cursor: pointer;
             font-size: 0.75rem;
             font-weight: 600;
-            margin-top: 8px;
+            margin-top: 10px;
             border: 1px solid rgba(255,255,255,0.05);
             transition: all 0.2s;
         }
 
         .btn-upload:hover {
-            background-color: #323238;
-            color: #fff;
+            background-color: #00f0ff;
+            color: #0c0c12;
+            font-weight: 700;
         }
 
         .btn-save {
@@ -121,16 +125,19 @@
             background-color: #8257e5;
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
             font-size: 1rem;
-            transition: background 0.2s;
-            box-shadow: 0 4px 12px rgba(130, 87, 229, 0.2);
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(130, 87, 229, 0.3);
         }
 
         .btn-save:hover {
             background-color: #9466ff;
+            box-shadow: 0 4px 25px rgba(130, 87, 229, 0.5);
+            transform: translateY(-1px);
         }
 
         .btn-clear {
@@ -139,7 +146,7 @@
             border: none;
             font-size: 0.8rem;
             font-weight: 600;
-            margin-top: 15px;
+            margin-top: 18px;
             cursor: pointer;
             text-decoration: underline;
             opacity: 0.7;
@@ -162,11 +169,19 @@
         <h2 id="welcomeTitle">Olá!</h2>
         <div id="userDisplay" class="username-display">Jogador_Novo</div>
 
-        <hr style="border: 0; border-top: 1px solid #29292e; margin: 1.5rem 0;">
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 1.5rem 0;">
 
         <div class="form-group">
             <label for="usernameInput">Nome de Usuário:</label>
             <input type="text" id="usernameInput" placeholder="Digite seu nick...">
+        </div>
+
+        <div class="form-group">
+            <label for="genderInput">Modelo de Gênero:</label>
+            <select id="genderInput" class="select-custom">
+                <option value="masculino">Masculino (Neon Azul)</option>
+                <option value="feminino">Feminino (Neon Rosa)</option>
+            </select>
         </div>
 
         <button class="btn-save" id="saveBtn">Salvar Alterações</button>
@@ -179,12 +194,12 @@
         const avatarInput = document.getElementById('avatarInput');
         const avatarPreview = document.getElementById('avatarPreview');
         const usernameInput = document.getElementById('usernameInput');
+        const genderInput = document.getElementById('genderInput');
         const userDisplay = document.getElementById('userDisplay');
         const saveBtn = document.getElementById('saveBtn');
         const clearBtn = document.getElementById('clearBtn');
 
         let fotoBase64Atual = "";
-        let generoAtual = "masculino"; // Mantém armazenado sem quebrar o layout padrão
 
         // 1. Carrega dados da conta na UI
         function atualizarUI() {
@@ -192,41 +207,68 @@
             
             userDisplay.textContent = conta.nome;
             usernameInput.value = conta.nome;
+            genderInput.value = conta.gender || "masculino";
             avatarPreview.src = conta.foto;
             
             fotoBase64Atual = conta.foto;
-            generoAtual = conta.gender || "masculino";
+            
+            // Muda a borda neon dependendo do gênero para um charme visual extra
+            avatarPreview.style.borderColor = (conta.gender === 'feminino') ? '#ff007f' : '#00f0ff';
+            avatarPreview.style.boxShadow = (conta.gender === 'feminino') ? '0 0 20px rgba(255, 0, 127, 0.25)' : '0 0 20px rgba(0, 240, 255, 0.25)';
         }
 
         window.addEventListener('DOMContentLoaded', atualizarUI);
 
-        // 2. Transforma nova foto em Base64
+        // 2. Transforma a foto em Base64 COMPRIMIDO e LEVE (Evita lag no Socket.io)
         avatarInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
-                    fotoBase64Atual = event.target.result;
-                    avatarPreview.src = fotoBase64Atual;
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function() {
+                        // ⚡ COMPRESSÃO VIA CANVAS INVISÍVEL
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Força a imagem a virar um quadrado perfeito e leve de 128x128 pixels
+                        canvas.width = 128;
+                        canvas.height = 128;
+                        
+                        // Desenha redimensionando com algoritmos do navegador
+                        ctx.drawImage(img, 0, 0, 128, 128);
+                        
+                        // Exporta como JPEG de alta performance (Qualidade 0.8)
+                        fotoBase64Atual = canvas.toDataURL('image/jpeg', 0.8);
+                        avatarPreview.src = fotoBase64Atual;
+                    };
                 };
                 reader.readAsDataURL(file);
             }
         });
 
+        // Mudar borda neon em tempo real na alteração do select
+        genderInput.addEventListener('change', (e) => {
+            avatarPreview.style.borderColor = (e.target.value === 'feminino') ? '#ff007f' : '#00f0ff';
+            avatarPreview.style.boxShadow = (e.target.value === 'feminino') ? '0 0 20px rgba(255, 0, 127, 0.25)' : '0 0 20px rgba(0, 240, 255, 0.25)';
+        });
+
         // 3. Salva usando a nova lógica estendida do conta.js
         saveBtn.addEventListener('click', () => {
             const novoNome = usernameInput.value.trim();
+            const novoGenero = genderInput.value;
             
             if (novoNome === "") {
                 alert("Por favor, insira um nome válido.");
                 return;
             }
 
-            // Envia o nome, gênero e a string da imagem de perfil de forma correta
-            ContaSistema.salvar(novoNome, generoAtual, fotoBase64Atual);
+            // Envia o nome, gênero e a string comprimida leve
+            ContaSistema.salvar(novoNome, novoGenero, fotoBase64Atual);
             
             userDisplay.textContent = novoNome;
-            alert("Alterações salvas com sucesso no perfil!");
+            alert("Alterações salvas com sucesso no perfil global!");
         });
 
         // 4. Botão de limpeza
