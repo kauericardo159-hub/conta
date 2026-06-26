@@ -1,136 +1,118 @@
-// conta.js - Sistema de Persistência de Dados Pro (Save/Load/Economy)
+/**
+ * --- SISTEMA DE GERENCIAMENTO DE CONTA LOCAL PRO ---
+ * Gerencia persistência, backup, importação, economia e metadados de conta.
+ */
 
 const ContaSistema = {
-    // Chave única usada no LocalStorage do navegador
     STORAGE_KEY: 'meu_game_user_account',
 
-    // Dados padrão para novos usuários ou redefinições
+    // Estrutura expandida para suportar os novos módulos e economia
     dadosPadrao: {
         nome: "Jogador_Novo",
         gender: "masculino",
-        foto: "https://cdn-icons-png.flaticon.com/512/149/149071.png", // Imagem neutra base
-        modelo3d: "", // Armazenamento de malhas personalizadas se necessário
-        bits: 0,       // Moeda padrão do Hub (Sincronizado)
-        rank: "Recruta" // Classificação inicial de nível (Sincronizado)
+        foto: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+        modelo3d: "",
+        bits: 0, // Injetado para sincronizar com o ecossistema de recompensas do jogo
+        saves: { "Jogo da Velha": "0 vitórias", "Nível": "1" },
+        memorias: { "Data de Criação": new Date().toLocaleDateString() },
+        sites: { "Base": "Ativo" }
     },
 
-    /**
-     * Carrega os dados da conta. Retorna o progresso salvo ou a estrutura limpa.
-     * @returns {Object} Dados estruturados da conta do jogador
-     */
     carregar: function() {
         try {
             const dadosSalvos = localStorage.getItem(this.STORAGE_KEY);
-            
-            if (dadosSalvos) {
-                const conta = JSON.parse(dadosSalvos);
-                
-                // Mapeamento preventivo garantindo fallbacks seguros para chaves novas ou legadas
-                return {
-                    nome: conta.nome || this.dadosPadrao.nome,
-                    gender: conta.gender || this.dadosPadrao.gender,
-                    foto: conta.foto || this.dadosPadrao.foto,
-                    modelo3d: conta.modelo3d || (conta.avatar || ""), // Migração limpa para chaves antigas
-                    bits: conta.bits !== undefined ? Number(conta.bits) : this.dadosPadrao.bits,
-                    rank: conta.rank || this.dadosPadrao.rank
-                };
-            }
-        } catch (error) {
-            console.warn("⚠️ [ContaSistema] Acesso ao LocalStorage bloqueado ou corrompido. Usando dados virtuais.", error);
+            return dadosSalvos ? { ...this.dadosPadrao, ...JSON.parse(dadosSalvos) } : this.dadosPadrao;
+        } catch (e) {
+            console.error("Erro ao carregar conta:", e);
+            return this.dadosPadrao;
         }
+    },
+
+    // Salva apenas os dados da UI (Perfil) preservando as listas de progresso
+    salvarDadosBase: function(nome, gender, foto) {
+        const atual = this.carregar();
+        const novaConta = { ...atual, nome, gender, foto };
+        this._persistir(novaConta);
+    },
+
+    // Motor de Economia Integrado (Essencial para o Jogo da Velha Multiplayer)
+    modificarBits: function(qtd) {
+        const conta = this.carregar();
+        conta.bits = Math.max(0, (conta.bits || 0) + qtd);
+        this._persistir(conta);
+        this.atualizarUI(); // Sincroniza visualmente as telas abertas
+        return conta.bits;
+    },
+
+    // Sincronizador de UI Global (Seguro para index.html e perfil.html)
+    atualizarUI: function() {
+        const conta = this.carregar();
         
-        // Retorna uma cópia dos dados iniciais se nenhum registro for encontrado
-        return { ...this.dadosPadrao };
+        // Elementos da Topbar do Jogo da Velha (se existirem na página atual)
+        const headerAvatar = document.getElementById('headerAvatar');
+        const headerNome = document.getElementById('headerNome');
+        const headerBits = document.getElementById('headerBits');
+        
+        if (headerAvatar) headerAvatar.src = conta.foto;
+        if (headerNome) headerNome.textContent = conta.nome;
+        if (headerBits) headerBits.textContent = `⚡ ${conta.bits || 0}`;
+
+        // Elementos da página própria de perfil (perfil.html)
+        const userDisplay = document.getElementById('userDisplay');
+        const usernameInput = document.getElementById('usernameInput');
+        const avatarPreview = document.getElementById('avatarPreview');
+        
+        if (userDisplay) userDisplay.textContent = conta.nome;
+        if (usernameInput && document.activeElement !== usernameInput) usernameInput.value = conta.nome;
+        if (avatarPreview) avatarPreview.src = conta.foto;
     },
 
-    /**
-     * Salva as configurações estéticas do perfil mantendo os dados de progresso intactos.
-     * @param {string} nome - Nickname do jogador
-     * @param {string} gender - Gênero/Paleta de Neon ('masculino' ou 'feminino')
-     * @param {string} avatarBase64 - String comprimida da foto ou arquivo 3D
-     */
-    salvar: function(nome, gender, avatarBase64) {
+    // Atualiza progresso (usado por jogos para salvar pontuação ou dados)
+    atualizarProgresso: function(modulo, chave, valor) {
+        const conta = this.carregar();
+        if (!conta[modulo]) conta[modulo] = {};
+        conta[modulo][chave] = valor;
+        this._persistir(conta);
+    },
+
+    _persistir: function(dados) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dados));
+    },
+
+    // --- MÓDULOS DE BACKUP E IMPORTAÇÃO ---
+
+    exportarConta: function() {
+        const dados = localStorage.getItem(this.STORAGE_KEY);
+        if (!dados) return alert("Nada para baixar!");
+        
+        const blob = new Blob([dados], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `minha_conta_${new Date().getTime()}.json`;
+        a.click();
+    },
+
+    importarConta: function(jsonString) {
         try {
-            // Puxa o estado atual completo (incluindo Bits e Rank já conquistados)
-            const contaAtual = this.carregar();
-
-            let fotoSalvar = contaAtual.foto;
-            let modeloSalvar = contaAtual.modelo3d;
-
-            if (avatarBase64) {
-                if (avatarBase64.startsWith("data:image")) {
-                    fotoSalvar = avatarBase64;
-                } else {
-                    modeloSalvar = avatarBase64;
-                }
+            const novaConta = JSON.parse(jsonString);
+            // Validação para garantir integridade estrutural mínima
+            if (novaConta && typeof novaConta === 'object' && novaConta.nome) {
+                // Garante que chaves de moedas antigas sem o campo inicializem em 0
+                if (novaConta.bits === undefined) novaConta.bits = 0;
+                this._persistir(novaConta);
+                this.atualizarUI();
+                return true;
             }
-
-            // Mesclagem Inteligente: Preserva o progresso econômico e atualiza a identidade
-            const novosDados = {
-                ...contaAtual, // Mantém intocados os Bits, Ranks e contratos salvos pelo Hub
-                nome: nome ? nome.trim() : contaAtual.nome,
-                gender: gender || contaAtual.gender,
-                foto: fotoSalvar,
-                modelo3d: modeloSalvar
-            };
-            
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(novosDados));
-            console.log("💾 [ContaSistema] Identidade sincronizada sem afetar seu saldo de jogo!");
-            return true;
-        } catch (error) {
-            console.error("❌ [ContaSistema] Falha ao injetar dados no LocalStorage (Limite estourado?):", error);
+            throw new Error("Formato inválido");
+        } catch (e) {
+            alert("Erro ao importar: O arquivo JSON parece corrompido ou não é uma conta válida.");
             return false;
         }
     },
 
-    /**
-     * Gerenciador Econômico: Adiciona ou remove fundos diretamente das atividades do jogo.
-     * @param {number} quantidade - Quantia a somar (positivo) ou subtrair (negativo)
-     */
-    modificarBits: function(quantidade) {
-        try {
-            const conta = this.carregar();
-            conta.bits = Math.max(0, conta.bits + quantidade); // Impede que o saldo fique negativo
-            
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(conta));
-            console.log(`🪙 [ContaSistema] Balanço atualizado: ${conta.bits} BT`);
-            return conta.bits;
-        } catch (error) {
-            console.error("❌ [ContaSistema] Erro nas operações financeiras locais:", error);
-            return 0;
-        }
-    },
-
-    /**
-     * Gerenciador de Patentes: Promove ou altera a classificação competitiva do jogador.
-     * @param {string} novoRank - String identificadora do novo Rank (ex: 'Elite', 'Ciborgue')
-     */
-    definirRank: function(novoRank) {
-        try {
-            if (!novoRank) return false;
-            const conta = this.carregar();
-            conta.rank = novoRank.trim();
-            
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(conta));
-            console.log(`🏆 [ContaSistema] Nova classificação definida: ${conta.rank}`);
-            return true;
-        } catch (error) {
-            console.error("❌ [ContaSistema] Não foi possível atualizar o Rank local:", error);
-            return false;
-        }
-    },
-
-    /**
-     * Remove completamente o registro local do ecossistema.
-     */
     limpar: function() {
-        try {
-            localStorage.removeItem(this.STORAGE_KEY);
-            console.log("🧹 [ContaSistema] Memória limpa e conta desvinculada.");
-            return true;
-        } catch (error) {
-            console.error("❌ [ContaSistema] Falha ao limpar o banco de dados local:", error);
-            return false;
-        }
+        localStorage.removeItem(this.STORAGE_KEY);
+        return true;
     }
 };

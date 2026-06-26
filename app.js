@@ -1,143 +1,301 @@
-// app.js - Controle da Interface Pro (UI Perfil)
-
-// Captura segura dos elementos da interface (compatível com perfil.html)
-const avatarInput = document.getElementById('avatarInput');
-const avatarPreview = document.getElementById('avatarPreview');
-const usernameInput = document.getElementById('usernameInput');
-const genderInput = document.getElementById('genderInput');
-const userDisplay = document.getElementById('userDisplay');
-const saveBtn = document.getElementById('saveBtn');
-const clearBtn = document.getElementById('clearBtn');
-
-// Elementos de exibição da economia do Hub
-const hubBits = document.getElementById('hubBits');
-const hubRank = document.getElementById('hubRank');
-
-// Estado interno controlado por reatividade
-let fotoBase64Atual = "";
-
 /**
- * 1. INICIALIZAÇÃO: Renderiza os dados locais e aplica o tema visual
+ * --- LÓGICA DO JOGO (APP.JS) ---
+ * Gerencia a comunicação com o servidor Socket.io, economia e o estado da partida.
  */
-function carregarDadosNaTela() {
-    const usuario = ContaSistema.carregar();
-    
-    // Injeção de textos e inputs
-    if (userDisplay) userDisplay.textContent = usuario.nome;
-    if (usernameInput) usernameInput.value = usuario.nome;
-    if (genderInput) genderInput.value = usuario.gender || "masculino";
-    
-    // Atualização dos recursos financeiros e patentes
-    if (hubBits) hubBits.textContent = `${usuario.bits} BT`;
-    if (hubRank) hubRank.textContent = usuario.rank;
-    
-    // Sincronização do preview de imagem
-    if (avatarPreview) {
-        avatarPreview.src = usuario.foto;
-        fotoBase64Atual = usuario.foto;
-        aplicarNeonDinamico(usuario.gender);
-    }
+
+// 1. Inicialização de Perfil Seguro via conta.js
+const meuPerfilLocal = ContaSistema.carregar();
+const meuNomeConfirmado = meuPerfilLocal.nome;
+const minhaFotoConfirmada = meuPerfilLocal.foto;
+
+// Atualiza o header assim que o app inicia através do core do sistema
+if (typeof ContaSistema.atualizarUI === 'function') {
+    ContaSistema.atualizarUI();
 }
+ 
+// 2. Conexão com o Servidor Multiplayer
+const URL_SERVIDOR = "https://jogo-da-velha-t0jl.onrender.com"; 
+const socket = io(URL_SERVIDOR);
 
-/**
- * Auxiliar: Altera a paleta neon do avatar baseado no gênero selecionado
- */
-function aplicarNeonDinamico(genero) {
-    if (!avatarPreview) return;
+// 3. Estados Globais do Jogo
+let minhaSala = "";
+let meuSimbolo = ""; 
+let meuTurno = false;
+let vitoriasX = 0;
+let vitoriasO = 0;
+let tabuleiroEstado = ["", "", "", "", "", "", "", "", ""];
+
+// Elementos da Interface
+const casas = document.querySelectorAll('.casa');
+const statusText = document.getElementById('status');
+const lobby = document.getElementById('tela-lobby');
+const jogoArea = document.getElementById('area-jogo');
+const FOTO_PADRAO = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+// --- OUVINTES DE EVENTOS SOCKET.IO ---
+
+// Recebe a lista de salas e desenha no lobby
+socket.on('lista-salas', (salas) => {
+    const container = document.getElementById('lista-salas-container');
+    if (!container) return;
+    container.innerHTML = "";
     
-    if (genero === 'feminino') {
-        avatarPreview.style.borderColor = '#ff007f';
-        avatarPreview.style.boxShadow = '0 0 20px rgba(255, 0, 127, 0.35)';
+    if (!salas || salas.length === 0) {
+        container.innerHTML = '<div class="no-salas">Nenhuma matriz aberta. Inicie uma nova!</div>';
+        return;
+    }
+    
+    salas.forEach(sala => {
+        if (sala.jogadores < 2) {
+            const fotoDono = sala.donoFoto || FOTO_PADRAO;
+            const nomeDono = sala.donoNome || "Desconhecido";
+
+            const item = document.createElement('div');
+            item.className = 'item-sala';
+            item.innerHTML = `
+                <div class="sala-info-bloco">
+                    <img class="sala-dono-avatar" src="${fotoDono}" alt="Dono">
+                    <div class="sala-detalhes">
+                        <span class="sala-nome-txt">${sala.nome}</span>
+                        <span class="sala-vagas">Criador: ${nomeDono} (${sala.jogadores}/2)</span>
+                    </div>
+                </div>
+                <button onclick="entrarNaSala('${sala.nome}')">Conectar</button>
+            `;
+            container.appendChild(item);
+        }
+    });
+});
+
+// Atribuição de time/símbolo (X ou O)
+socket.on('player-assignment', (dados) => {
+    const simbolo = typeof dados === 'object' ? dados.simbolo : dados;
+    meuSimbolo = simbolo;
+
+    if (simbolo === "X") {
+        statusText.innerText = "Você é o Player 1 [X]. Aguardando oponente...";
+        document.getElementById('p1-name').innerText = meuNomeConfirmado;
+        document.getElementById('p1-avatar').src = minhaFotoConfirmada;
+        meuTurno = true;
     } else {
-        avatarPreview.style.borderColor = '#00f0ff';
-        avatarPreview.style.boxShadow = '0 0 20px rgba(0, 240, 255, 0.35)';
+        statusText.innerText = "Você é o Player 2 [O]. Sincronizando rodada...";
+        document.getElementById('p2-name').innerText = meuNomeConfirmado;
+        document.getElementById('p2-avatar').src = minhaFotoConfirmada;
+        meuTurno = false;
+    }
+    resgatarVez();
+});
+
+// Sincronização Inteligente da Sala (Evita o sumiço do seu avatar na esquerda)
+socket.on('room-info', (info) => {
+    if (!meuSimbolo || !info) return;
+
+    if (meuSimbolo === "X") {
+        document.getElementById('p1-name').innerText = meuNomeConfirmado;
+        document.getElementById('p1-avatar').src = minhaFotoConfirmada;
+        
+        if (info.p2) {
+            document.getElementById('p2-name').innerText = info.p2.nome;
+            document.getElementById('p2-avatar').src = (info.p2.foto && info.p2.foto.length > 10) ? info.p2.foto : FOTO_PADRAO;
+        } else {
+            document.getElementById('p2-name').innerText = "Aguardando...";
+            document.getElementById('p2-avatar').src = FOTO_PADRAO;
+        }
+    } 
+    else if (meuSimbolo === "O") {
+        document.getElementById('p2-name').innerText = meuNomeConfirmado;
+        document.getElementById('p2-avatar').src = minhaFotoConfirmada;
+        
+        if (info.p1) {
+            document.getElementById('p1-name').innerText = info.p1.nome;
+            document.getElementById('p1-avatar').src = (info.p1.foto && info.p1.foto.length > 10) ? info.p1.foto : FOTO_PADRAO;
+        } else {
+            document.getElementById('p1-name').innerText = "Aguardando...";
+            document.getElementById('p1-avatar').src = FOTO_PADRAO;
+        }
+    }
+    resgatarVez();
+});
+
+// Início oficial do jogo (Dois players na sala)
+socket.on('start-game', () => {
+    resgatarVez();
+});
+
+// Captura jogada do oponente
+socket.on('move-made', (dados) => {
+    fazerJogadaLocal(dados.index, dados.simbolo);
+});
+
+// W.O. ou desconexão prematura
+socket.on('player-disconnected', () => {
+    statusText.innerText = "Oponente desconectou da rede! Ganhador por W.O.";
+    
+    // Registra vitória por abandono e paga recompensa parcial de W.O.
+    sincronizarVitoriaNoPerfil();
+    if (typeof ContaSistema.modificarBits === 'function') {
+        ContaSistema.modificarBits(25);
+    }
+    
+    setTimeout(() => location.reload(), 3000);
+});
+
+// --- FUNÇÕES DE CONTROLE DE FLUXO ---
+
+function entrarNaSala(nomeSala) {
+    minhaSala = nomeSala;
+    lobby.style.display = "none";
+    jogoArea.style.display = "block";
+    statusText.innerText = "Negociando chaves com o servidor...";
+
+    socket.emit('entrar-na-sala', {
+        sala: minhaSala,
+        jogadorNome: meuNomeConfirmado,
+        jogadorFoto: minhaFotoConfirmada
+    });
+}
+
+// Evento de clique no Tabuleiro
+casas.forEach(casa => {
+    casa.addEventListener('click', () => {
+        const idx = casa.getAttribute('data-index');
+        if (!meuTurno || tabuleiroEstado[idx] !== "") return;
+
+        fazerJogadaLocal(idx, meuSimbolo);
+        socket.emit('make-move', { sala: minhaSala, index: idx, simbolo: meuSimbolo });
+    });
+});
+
+function fazerJogadaLocal(index, simbolo) {
+    tabuleiroEstado[index] = simbolo;
+    if (casas[index]) casas[index].innerText = simbolo;
+    meuTurno = (simbolo !== meuSimbolo);
+    
+    if (!checarResultado()) {
+        resgatarVez();
     }
 }
 
-// Escuta ativa do DOM para carregamento inicial
-window.addEventListener('DOMContentLoaded', carregarDadosNaTela);
-
-/**
- * 2. REATIVIDADE VISUAL: Altera o neon em tempo real ao mudar o seletor
- */
-if (genderInput) {
-    genderInput.addEventListener('change', (e) => {
-        aplicarNeonDinamico(e.target.value);
-    });
+function resgatarVez() {
+    const vezDoP1 = (meuTurno && meuSimbolo === "X") || (!meuTurno && meuSimbolo === "O");
+    statusText.innerText = vezDoP1 ? "Sua vez de jogar!" : "Aguardando ação do oponente...";
+    
+    // Liga/Desliga as bordas neon dinâmicas baseado rigorosamente na classe .ativo
+    document.getElementById('p1-display').classList.toggle('ativo', vezDoP1);
+    document.getElementById('p2-display').classList.toggle('ativo', !vezDoP1);
+    
+    // Preserva os dados locais ativos no painel
+    if (meuSimbolo === "X") {
+        document.getElementById('p1-name').innerText = meuNomeConfirmado;
+        document.getElementById('p1-avatar').src = minhaFotoConfirmada;
+    } else if (meuSimbolo === "O") {
+        document.getElementById('p2-name').innerText = meuNomeConfirmado;
+        document.getElementById('p2-avatar').src = minhaFotoConfirmada;
+    }
 }
 
-/**
- * 3. COMPRESSÃO VIA CANVAS: Reduz a foto para 128x128 para evitar lag no Socket.io
- */
-if (avatarInput) {
-    avatarInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            if (!file.type.startsWith('image/')) {
-                alert("Por favor, selecione um arquivo de imagem válido (PNG/JPG).");
-                return;
+function checarResultado() {
+    const caminhosVitoria = [
+        [0,1,2], [3,4,5], [6,7,8],
+        [0,3,6], [1,4,7], [2,5,8],
+        [0,4,8], [2,4,6]
+    ];
+
+    for (const caminho of caminhosVitoria) {
+        const [a, b, c] = caminho;
+        if (tabuleiroEstado[a] && tabuleiroEstado[a] === tabuleiroEstado[b] && tabuleiroEstado[a] === tabuleiroEstado[c]) {
+            finalizarRodada(tabuleiroEstado[a], caminho);
+            return true;
+        }
+    }
+
+    if (!tabuleiroEstado.includes("")) {
+        finalizarRodada("Empate");
+        return true;
+    }
+    return false;
+}
+
+function finalizarRodada(vencedor, caminhoGanhador = null) {
+    meuTurno = false;
+    
+    if (vencedor === "Empate") {
+        statusText.innerText = "Empate Técnico na Matrix!";
+    } else {
+        if (caminhoGanhador) {
+            caminhoGanhador.forEach(i => { if (casas[i]) casas[i].setAttribute('data-venceu', 'true'); });
+        }
+        if (vencedor === "X") vitoriasX++;
+        if (vencedor === "O") vitoriasO++;
+
+        document.getElementById('score-x').innerText = vitoriasX;
+        document.getElementById('score-o').innerText = vitoriasO;
+
+        statusText.innerText = vencedor === meuSimbolo ? "Você venceu a rodada!" : "O oponente quebrou seu sinal!";
+    }
+
+    setTimeout(() => {
+        if (vitoriasX === 3 || vitoriasO === 3) {
+            const vencedorPartida = vitoriasX === 3 ? "X" : "O";
+            
+            if (meuSimbolo === vencedorPartida) {
+                sincronizarVitoriaNoPerfil();
+                if (typeof ContaSistema.modificarBits === 'function') ContaSistema.modificarBits(50);
+                alert("🏆 VITÓRIA DO SISTEMA! Você faturou +50 Bits!");
+            } else {
+                if (typeof ContaSistema.modificarBits === 'function') ContaSistema.modificarBits(5);
+                alert("💀 CONEXÃO PERDIDA: Oponente fechou a melhor de 3. +5 Bits.");
             }
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.src = event.target.result;
-                img.onload = function() {
-                    // Instancia um canvas invisível em memória para processamento de vfx
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    // Define o tamanho ideal e ultra-leve para tráfego de rede estável
-                    canvas.width = 128;
-                    canvas.height = 128;
-                    
-                    // Desenha a imagem redimensionando para o quadrado perfeito
-                    ctx.drawImage(img, 0, 0, 128, 128);
-                    
-                    // Converte para string compacta JPEG com 80% de qualidade
-                    fotoBase64Atual = canvas.toDataURL('image/jpeg', 0.8);
-                    avatarPreview.src = fotoBase64Atual;
-                };
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-}
-
-/**
- * 4. PERSISTÊNCIA SEGURA: Salva os dados sem corromper as variáveis da carteira
- */
-if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
-        const novoNome = usernameInput.value.trim();
-        const novoGenero = genderInput.value;
-        
-        if (novoNome === "") {
-            alert("Por favor, digite um nome de usuário válido.");
-            return;
-        }
-
-        // Executa o salvamento com o spread seguro implementado no conta.js
-        // (Isso protege o modelo3d, bits e rank automaticamente contra apagamentos)
-        const sucesso = ContaSistema.salvar(novoNome, novoGenero, fotoBase64Atual);
-        
-        if (sucesso) {
-            if (userDisplay) userDisplay.textContent = novoNome;
-            alert("Sincronização concluída! Seu perfil global foi atualizado.");
+            
+            location.reload();
         } else {
-            alert("Erro crítico ao salvar as alterações no banco local.");
+            proximaRodada();
         }
+    }, 2500);
+}
+
+function proximaRodada() {
+    tabuleiroEstado = ["", "", "", "", "", "", "", "", ""];
+    casas.forEach(casa => {
+        casa.innerText = "";
+        casa.removeAttribute('data-venceu');
     });
+    meuTurno = (meuSimbolo === "O" && (vitoriasX + vitoriasO) % 2 !== 0) || (meuSimbolo === "X" && (vitoriasX + vitoriasO) % 2 === 0);
+    resgatarVez();
 }
 
 /**
- * 5. RESET DE INSTÂNCIA: Limpa o armazenamento e restaura o estado padrão
+ * Extrai o progresso atualizado de vitórias de forma dinâmica e incrementa 
+ * diretamente na partição de Saves e Nível do conta.js
  */
-if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-        if (confirm("Deseja mesmo resetar e excluir os dados locais da sua conta? Todo o progresso será perdido.")) {
-            ContaSistema.limpar();
-            carregarDadosNaTela(); // Força a UI a voltar para o "Jogador_Novo"
+function sincronizarVitoriaNoPerfil() {
+    const dadosAtuais = ContaSistema.carregar();
+    const strVitórias = (dadosAtuais.saves && dadosAtuais.saves["Jogo da Velha"]) || "0 vitórias";
+    
+    let totalVitorias = parseInt(strVitórias.replace(/[^0-9]/g, '')) || 0;
+    totalVitorias++;
+    
+    ContaSistema.atualizarProgresso('saves', 'Jogo da Velha', `${totalVitorias} vitórias`);
+    
+    const novoNivel = Math.floor(totalVitorias / 3) + 1;
+    ContaSistema.atualizarProgresso('saves', 'Nível', String(novoNivel));
+    ContaSistema.atualizarProgresso('memorias', 'Última Vitória', new Date().toLocaleDateString() + ' - Jogo da Velha');
+}
+
+// Botões de Interação direta da Interface
+if (document.getElementById('btn-criar')) {
+    document.getElementById('btn-criar').addEventListener('click', () => {
+        let nomeSala = document.getElementById('input-sala').value.trim();
+        if (!nomeSala) {
+            nomeSala = `GRID_${Math.floor(Math.random() * 899 + 100)}`;
         }
+        entrarNaSala(nomeSala);
+    });
+}
+
+if (document.getElementById('btn-sair')) {
+    document.getElementById('btn-sair').addEventListener('click', () => {
+        socket.emit('sair-da-sala', minhaSala);
+        location.reload();
     });
 }
