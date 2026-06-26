@@ -3,9 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minha Conta Base - Gerenciador Pro</title>
+    <title>Configurações de Perfil - Cyber Arcade</title>
     <style>
-        /* CSS Otimizado com Tema Dark / Cyberpunk */
+        /* ==========================================================================
+           RESET & VARIÁVEIS CYBERPUNK
+           ========================================================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #0c0c12;
@@ -13,26 +22,31 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            min-height: 100vh;
+            padding: 20px;
             user-select: none;
         }
 
+        /* ==========================================================================
+           CARD PRINCIPAL RESPONSIVO
+           ========================================================================== */
         .account-card {
             background-color: #14141d;
-            padding: 2.5rem;
+            padding: 2.5rem 2rem;
             border-radius: 16px;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(130, 87, 229, 0.1);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 0 25px rgba(130, 87, 229, 0.15);
             text-align: center;
-            width: 350px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid rgba(130, 87, 229, 0.2);
         }
 
+        /* Container do Avatar e Upload */
         .avatar-container {
             position: relative;
-            width: 130px;
-            height: 130px;
-            margin: 0 auto 1.5rem;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1rem;
         }
 
         .avatar-img {
@@ -43,26 +57,94 @@
             border: 3px solid #00f0ff;
             box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
             background: #0c0c12;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
         }
 
-        h2 {
-            margin: 10px 0 5px 0;
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn-upload {
+            display: inline-block;
+            padding: 5px 12px;
+            background-color: #0c0c12;
+            color: #a8a8b3;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-upload:hover {
+            background-color: #8257e5;
             color: #fff;
+            border-color: #9466ff;
+            box-shadow: 0 0 10px rgba(130, 87, 229, 0.4);
+        }
+
+        /* Textos de Identidade */
+        h2 {
+            margin: 0 0 4px 0;
+            color: #fff;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-size: 1.4rem;
+        }
+
+        .username-display {
+            font-size: 1.2rem;
+            color: #00ffcc;
+            font-weight: bold;
+            margin-bottom: 1.2rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 0 8px rgba(0, 255, 204, 0.2);
+        }
+
+        /* ==========================================================================
+           STATUS DO JOGADOR COMPATÍVEL COM O HUB
+           ========================================================================== */
+        .player-hub-stats {
+            display: flex;
+            justify-content: space-around;
+            background: #0c0c12;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-block {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: #7c7c8a;
+            text-transform: uppercase;
             font-weight: 700;
             letter-spacing: 0.5px;
         }
 
-        .username-display {
-            font-size: 1.25rem;
-            color: #04d361;
-            font-weight: bold;
-            margin-bottom: 1.5rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .stat-val {
+            font-size: 0.9rem;
+            font-weight: 800;
         }
+        .stat-val.bits { color: #ffcc00; }
+        .stat-val.rank { color: #9466ff; }
 
+        /* ==========================================================================
+           FORMULÁRIOS E SELETORES
+           ========================================================================== */
         .form-group {
             margin-bottom: 1.2rem;
             text-align: left;
@@ -71,8 +153,8 @@
         label {
             display: block;
             margin-bottom: 0.5rem;
-            color: #00f0ff;
-            font-size: 0.78rem;
+            color: #a8a8b3;
+            font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -86,57 +168,38 @@
             background-color: #0c0c12;
             color: #fff;
             box-sizing: border-box;
+            font-size: 0.95rem;
             transition: all 0.2s;
         }
 
         input[type="text"]:focus, .select-custom:focus {
             outline: none;
-            border-color: #00f0ff;
-            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+            border-color: #8257e5;
+            box-shadow: 0 0 10px rgba(130, 87, 229, 0.2);
         }
 
-        input[type="file"] {
-            display: none;
-        }
-
-        .btn-upload {
-            display: inline-block;
-            padding: 6px 14px;
-            background-color: #1c1c24;
-            color: #a8a8b3;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-top: 10px;
-            border: 1px solid rgba(255,255,255,0.05);
-            transition: all 0.2s;
-        }
-
-        .btn-upload:hover {
-            background-color: #00f0ff;
-            color: #0c0c12;
-            font-weight: 700;
-        }
-
+        /* ==========================================================================
+           AÇÃO E BOTÕES
+           ========================================================================== */
         .btn-save {
             width: 100%;
             padding: 14px;
-            background-color: #8257e5;
-            color: white;
+            background-color: #00ffcc;
+            color: #0c0c12;
             border: none;
             border-radius: 8px;
-            font-weight: bold;
+            font-weight: 900;
             cursor: pointer;
             font-size: 1rem;
-            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(130, 87, 229, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 255, 204, 0.2);
         }
 
         .btn-save:hover {
-            background-color: #9466ff;
-            box-shadow: 0 4px 25px rgba(130, 87, 229, 0.5);
+            background-color: #61ffdf;
+            box-shadow: 0 4px 25px rgba(0, 255, 204, 0.4);
             transform: translateY(-1px);
         }
 
@@ -145,39 +208,57 @@
             color: #ff4b4b;
             border: none;
             font-size: 0.8rem;
-            font-weight: 600;
+            font-weight: 700;
             margin-top: 18px;
             cursor: pointer;
-            text-decoration: underline;
-            opacity: 0.7;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.6;
             transition: opacity 0.2s;
         }
         .btn-clear:hover {
             opacity: 1;
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
 
     <div class="account-card">
+        <!-- Bloco de Imagem -->
         <div class="avatar-container">
             <img id="avatarPreview" class="avatar-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Avatar do Usuário">
-            <label for="avatarInput" class="btn-upload">Alterar Foto</label>
-            <input type="file" id="avatarInput" accept="image/*">
         </div>
+        <label for="avatarInput" class="btn-upload">Alterar Foto</label>
+        <input type="file" id="avatarInput" accept="image/*">
 
-        <h2 id="welcomeTitle">Olá!</h2>
+        <!-- Identidade -->
+        <h2 id="welcomeTitle">Painel de Acesso</h2>
         <div id="userDisplay" class="username-display">Jogador_Novo</div>
 
-        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 1.5rem 0;">
+        <!-- Indicadores de Recursos Sincronizados -->
+        <div class="player-hub-stats">
+            <div class="stat-block">
+                <span class="stat-label">Saldo Bits</span>
+                <span id="hubBits" class="stat-val bits">0 BT</span>
+            </div>
+            <div class="stat-block">
+                <span class="stat-label">Classificação</span>
+                <span id="hubRank" class="stat-val rank">Recruta</span>
+            </div>
+        </div>
 
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 1.2rem 0;">
+
+        <!-- Formulários -->
         <div class="form-group">
-            <label for="usernameInput">Nome de Usuário:</label>
-            <input type="text" id="usernameInput" placeholder="Digite seu nick...">
+            <label for="usernameInput">Nome de Usuário (Nick):</label>
+            <input type="text" id="usernameInput" placeholder="Digite seu nick..." maxlength="14">
         </div>
 
         <div class="form-group">
-            <label for="genderInput">Modelo de Gênero:</label>
+            <label for="genderInput">Modelo de Gênero & Neon:</label>
             <select id="genderInput" class="select-custom">
                 <option value="masculino">Masculino (Neon Azul)</option>
                 <option value="feminino">Feminino (Neon Rosa)</option>
@@ -188,6 +269,7 @@
         <button class="btn-clear" id="clearBtn">Excluir Conta Local</button>
     </div>
 
+    <!-- Script de Persistência Compartilhado -->
     <script src="conta.js"></script>
     
     <script>
@@ -198,6 +280,10 @@
         const userDisplay = document.getElementById('userDisplay');
         const saveBtn = document.getElementById('saveBtn');
         const clearBtn = document.getElementById('clearBtn');
+        
+        // Elementos de status do Hub
+        const hubBits = document.getElementById('hubBits');
+        const hubRank = document.getElementById('hubRank');
 
         let fotoBase64Atual = "";
 
@@ -211,15 +297,28 @@
             avatarPreview.src = conta.foto;
             
             fotoBase64Atual = conta.foto;
+
+            // Carrega dinamicamente os valores de Bits e Rank caso já existam no localStorage do Hub
+            if(conta.bits !== undefined) hubBits.textContent = `${conta.bits} BT`;
+            if(conta.rank !== undefined) hubRank.textContent = conta.rank;
             
-            // Muda a borda neon dependendo do gênero para um charme visual extra
-            avatarPreview.style.borderColor = (conta.gender === 'feminino') ? '#ff007f' : '#00f0ff';
-            avatarPreview.style.boxShadow = (conta.gender === 'feminino') ? '0 0 20px rgba(255, 0, 127, 0.25)' : '0 0 20px rgba(0, 240, 255, 0.25)';
+            // Ajusta paleta neon dinâmica baseado na preferência de gênero
+            aplicarNeonDinamico(conta.gender);
+        }
+
+        function aplicarNeonDinamico(genero) {
+            if (genero === 'feminino') {
+                avatarPreview.style.borderColor = '#ff007f';
+                avatarPreview.style.boxShadow = '0 0 20px rgba(255, 0, 127, 0.35)';
+            } else {
+                avatarPreview.style.borderColor = '#00f0ff';
+                avatarPreview.style.boxShadow = '0 0 20px rgba(0, 240, 255, 0.35)';
+            }
         }
 
         window.addEventListener('DOMContentLoaded', atualizarUI);
 
-        // 2. Transforma a foto em Base64 COMPRIMIDO e LEVE (Evita lag no Socket.io)
+        // 2. Processamento e Compressão Inteligente da Foto para Evitar Lag no Socket.io
         avatarInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -228,18 +327,18 @@
                     const img = new Image();
                     img.src = event.target.result;
                     img.onload = function() {
-                        // ⚡ COMPRESSÃO VIA CANVAS INVISÍVEL
+                        // Mapeamento em Canvas Invisível
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
                         
-                        // Força a imagem a virar um quadrado perfeito e leve de 128x128 pixels
+                        // Resolução otimizada para Avatares Multiplayer Reduzidos
                         canvas.width = 128;
                         canvas.height = 128;
                         
-                        // Desenha redimensionando com algoritmos do navegador
+                        // Desenha redimensionando para um quadrado perfeito
                         ctx.drawImage(img, 0, 0, 128, 128);
                         
-                        // Exporta como JPEG de alta performance (Qualidade 0.8)
+                        // Transforma em string de dados leve em formato JPEG
                         fotoBase64Atual = canvas.toDataURL('image/jpeg', 0.8);
                         avatarPreview.src = fotoBase64Atual;
                     };
@@ -248,32 +347,31 @@
             }
         });
 
-        // Mudar borda neon em tempo real na alteração do select
+        // Atualização reativa das cores neon ao trocar o seletor
         genderInput.addEventListener('change', (e) => {
-            avatarPreview.style.borderColor = (e.target.value === 'feminino') ? '#ff007f' : '#00f0ff';
-            avatarPreview.style.boxShadow = (e.target.value === 'feminino') ? '0 0 20px rgba(255, 0, 127, 0.25)' : '0 0 20px rgba(0, 240, 255, 0.25)';
+            aplicarNeonDinamico(e.target.value);
         });
 
-        // 3. Salva usando a nova lógica estendida do conta.js
+        // 3. Salva e sincroniza as atualizações
         saveBtn.addEventListener('click', () => {
             const novoNome = usernameInput.value.trim();
             const novoGenero = genderInput.value;
             
             if (novoNome === "") {
-                alert("Por favor, insira um nome válido.");
+                alert("Por favor, preencha o campo de Nome de Usuário.");
                 return;
             }
 
-            // Envia o nome, gênero e a string comprimida leve
+            // Armazena no encapsulamento local do arquivo conta.js
             ContaSistema.salvar(novoNome, novoGenero, fotoBase64Atual);
             
             userDisplay.textContent = novoNome;
-            alert("Alterações salvas com sucesso no perfil global!");
+            alert("Sincronização concluída! Perfil atualizado com sucesso.");
         });
 
-        // 4. Botão de limpeza
+        // 4. Limpeza e redefinição dos dados locais
         clearBtn.addEventListener('click', () => {
-            if(confirm("Tem certeza que deseja limpar os dados da sua conta?")) {
+            if(confirm("Deseja apagar os dados locais desta conta? Esta ação não pode ser desfeita.")) {
                 ContaSistema.limpar();
                 atualizarUI();
             }

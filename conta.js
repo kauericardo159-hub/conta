@@ -1,94 +1,132 @@
-// conta.js - Sistema de Persistência de Dados Pro (Save/Load)
+// conta.js - Sistema de Persistência de Dados Pro (Save/Load/Economy)
 
 const ContaSistema = {
-    // Chave que será usada no LocalStorage do navegador
+    // Chave única usada no LocalStorage do navegador
     STORAGE_KEY: 'meu_game_user_account',
 
-    // Dados padrão caso seja a primeira vez do usuário no ecossistema
+    // Dados padrão para novos usuários ou redefinições
     dadosPadrao: {
         nome: "Jogador_Novo",
         gender: "masculino",
-        foto: "https://cdn-icons-png.flaticon.com/512/149/149071.png", // Foto padrão do mini-perfil
-        modelo3d: "" // String base64 vazia inicialmente (usa o modelo base do jogo)
+        foto: "https://cdn-icons-png.flaticon.com/512/149/149071.png", // Imagem neutra base
+        modelo3d: "", // Armazenamento de malhas personalizadas se necessário
+        bits: 0,       // Moeda padrão do Hub (Sincronizado)
+        rank: "Recruta" // Classificação inicial de nível (Sincronizado)
     },
 
     /**
-     * Função para salvar os dados completos da conta do usuário.
-     * @param {string} nome - Nickname do jogador
-     * @param {string} gender - Gênero/Modelo base ('masculino' ou 'feminino')
-     * @param {string} avatarBase64 - Arquivo 3D ou Imagem convertida em string Base64
-     */
-    salvar: function(nome, gender, avatarBase64) {
-        try {
-            // Verifica o tipo de arquivo enviado para salvar no lugar certo
-            let fotoSalvar = this.dadosPadrao.foto;
-            let modeloSalvar = "";
-
-            if (avatarBase64) {
-                if (avatarBase64.startsWith("data:image")) {
-                    // Se for uma imagem real (png/jpg), salva como foto de perfil
-                    fotoSalvar = avatarBase64;
-                } else {
-                    // Se for o arquivo 3D convertido (.gltf/.glb), salva no slot de modelo
-                    modeloSalvar = avatarBase64;
-                }
-            } else {
-                // Se o usuário já tinha algo salvo anteriormente, mantém o que existia
-                const contaAtual = this.carregar();
-                fotoSalvar = contaAtual.foto;
-                modeloSalvar = contaAtual.modelo3d;
-            }
-
-            const dadosParaSalvar = {
-                nome: nome.trim() || this.dadosPadrao.nome,
-                gender: gender || this.dadosPadrao.gender,
-                foto: fotoSalvar,
-                modelo3d: modeloSalvar
-            };
-            
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dadosParaSalvar));
-            console.log("💾 [ContaSistema] Dados da conta sincronizados e salvos!");
-            return true;
-        } catch (error) {
-            console.error("❌ [ContaSistema] Erro ao salvar dados no LocalStorage (Limite de espaço excedido?):", error);
-            return false;
-        }
-    },
-
-    /**
-     * Função para carregar os dados da conta.
-     * Retorna os dados existentes ou o objeto padrão estruturado.
+     * Carrega os dados da conta. Retorna o progresso salvo ou a estrutura limpa.
+     * @returns {Object} Dados estruturados da conta do jogador
      */
     carregar: function() {
         try {
             const dadosSalvos = localStorage.getItem(this.STORAGE_KEY);
             
             if (dadosSalvos) {
-                const contaEstruturada = JSON.parse(dadosSalvos);
+                const conta = JSON.parse(dadosSalvos);
                 
-                // Garante compatibilidade caso alguma propriedade antiga esteja faltando
+                // Mapeamento preventivo garantindo fallbacks seguros para chaves novas ou legadas
                 return {
-                    nome: contaEstruturada.nome || this.dadosPadrao.nome,
-                    gender: contaEstruturada.gender || this.dadosPadrao.gender,
-                    foto: contaEstruturada.foto || this.dadosPadrao.foto,
-                    modelo3d: contaEstruturada.modelo3d || (contaEstruturada.avatar || "") // Migração segura caso usasse a chave antiga '.avatar'
+                    nome: conta.nome || this.dadosPadrao.nome,
+                    gender: conta.gender || this.dadosPadrao.gender,
+                    foto: conta.foto || this.dadosPadrao.foto,
+                    modelo3d: conta.modelo3d || (conta.avatar || ""), // Migração limpa para chaves antigas
+                    bits: conta.bits !== undefined ? Number(conta.bits) : this.dadosPadrao.bits,
+                    rank: conta.rank || this.dadosPadrao.rank
                 };
             }
         } catch (error) {
-            console.warn("⚠️ [ContaSistema] Não foi possível acessar o LocalStorage. Usando dados temporários.", error);
+            console.warn("⚠️ [ContaSistema] Acesso ao LocalStorage bloqueado ou corrompido. Usando dados virtuais.", error);
         }
         
-        // Se não tiver nada salvo ou der erro, retorna a estrutura limpa padrão
-        return this.dadosPadrao;
+        // Retorna uma cópia dos dados iniciais se nenhum registro for encontrado
+        return { ...this.dadosPadrao };
     },
 
     /**
-     * Remove completamente as credenciais e dados salvos da conta local.
+     * Salva as configurações estéticas do perfil mantendo os dados de progresso intactos.
+     * @param {string} nome - Nickname do jogador
+     * @param {string} gender - Gênero/Paleta de Neon ('masculino' ou 'feminino')
+     * @param {string} avatarBase64 - String comprimida da foto ou arquivo 3D
+     */
+    salvar: function(nome, gender, avatarBase64) {
+        try {
+            // Puxa o estado atual completo (incluindo Bits e Rank já conquistados)
+            const contaAtual = this.carregar();
+
+            let fotoSalvar = contaAtual.foto;
+            let modeloSalvar = contaAtual.modelo3d;
+
+            if (avatarBase64) {
+                if (avatarBase64.startsWith("data:image")) {
+                    fotoSalvar = avatarBase64;
+                } else {
+                    modeloSalvar = avatarBase64;
+                }
+            }
+
+            // Mesclagem Inteligente: Preserva o progresso econômico e atualiza a identidade
+            const novosDados = {
+                ...contaAtual, // Mantém intocados os Bits, Ranks e contratos salvos pelo Hub
+                nome: nome ? nome.trim() : contaAtual.nome,
+                gender: gender || contaAtual.gender,
+                foto: fotoSalvar,
+                modelo3d: modeloSalvar
+            };
+            
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(novosDados));
+            console.log("💾 [ContaSistema] Identidade sincronizada sem afetar seu saldo de jogo!");
+            return true;
+        } catch (error) {
+            console.error("❌ [ContaSistema] Falha ao injetar dados no LocalStorage (Limite estourado?):", error);
+            return false;
+        }
+    },
+
+    /**
+     * Gerenciador Econômico: Adiciona ou remove fundos diretamente das atividades do jogo.
+     * @param {number} quantidade - Quantia a somar (positivo) ou subtrair (negativo)
+     */
+    modificarBits: function(quantidade) {
+        try {
+            const conta = this.carregar();
+            conta.bits = Math.max(0, conta.bits + quantidade); // Impede que o saldo fique negativo
+            
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(conta));
+            console.log(`🪙 [ContaSistema] Balanço atualizado: ${conta.bits} BT`);
+            return conta.bits;
+        } catch (error) {
+            console.error("❌ [ContaSistema] Erro nas operações financeiras locais:", error);
+            return 0;
+        }
+    },
+
+    /**
+     * Gerenciador de Patentes: Promove ou altera a classificação competitiva do jogador.
+     * @param {string} novoRank - String identificadora do novo Rank (ex: 'Elite', 'Ciborgue')
+     */
+    definirRank: function(novoRank) {
+        try {
+            if (!novoRank) return false;
+            const conta = this.carregar();
+            conta.rank = novoRank.trim();
+            
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(conta));
+            console.log(`🏆 [ContaSistema] Nova classificação definida: ${conta.rank}`);
+            return true;
+        } catch (error) {
+            console.error("❌ [ContaSistema] Não foi possível atualizar o Rank local:", error);
+            return false;
+        }
+    },
+
+    /**
+     * Remove completamente o registro local do ecossistema.
      */
     limpar: function() {
         try {
             localStorage.removeItem(this.STORAGE_KEY);
-            console.log("🧹 [ContaSistema] Conta desconectada e dados limpos com sucesso.");
+            console.log("🧹 [ContaSistema] Memória limpa e conta desvinculada.");
             return true;
         } catch (error) {
             console.error("❌ [ContaSistema] Falha ao limpar o banco de dados local:", error);
